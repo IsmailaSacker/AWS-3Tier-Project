@@ -63,154 +63,160 @@ the above is the high-level architecture for the project
     -	We will create a VPC for the entire project.
     -	Subnets
 	We will need six subnets across two availability zones. That means that three subnets will be in one availability zone, and three subnets will be in another zone. Each subnet in one availability zone will correspond to one layer of our three-tier architecture. Create each of the 6 subnets by specifying the VPC we created above and then choose a name, availability zone, and appropriate CIDR range for each of the subnets.
-o	NOTE: It may be helpful to have a naming convention that will help you remember what each subnet is for. For example, in one AZ you might have the following: Public-Web-Subnet-AZ-1, Private-App-Subnet-AZ-1, Private-DB-Subnet-AZ-1.
+	- NOTE: It may be helpful to have a naming convention that will help you remember what each subnet is for. For example, in one AZ you might have the following: Public-Web-Subnet-AZ-1, Private-App-Subnet-AZ-1, Private-DB-Subnet-AZ-1.
  
-o	NOTE: Remember, your CIDR range for the subnets will be subsets of your VPC CIDR range.
-	Route Tables
-•	Create a Route Table for the web layer public subnets.
-•	After creating the route table, you'll automatically be taken to the details page. Scroll down and click on the Routes tab and Edit routes.
-•	Add a route that directs traffic from the VPC to the internet gateway. In other words, for all traffic destined for IPs outside the VPC CDIR range, add an entry that directs it to the internet gateway as a target. Save the changes.
-•	Edit the Explicit Subnet Associations of the route table by navigating to the route table details again. Select Subnet Associations and click Edit subnet associations.
-•	Select the two-web layer public subnets you created earlier and click Save associations.
-•	Now create 2 more route tables, one for each app layer private subnet in each availability zone. These route tables will route app layer traffic destined for outside the VPC to the NAT gateway in the respective availability zone, so add the appropriate routes for that.
-•	Once the route tables are created and routes added, add the appropriate subnet associations for each of the app layer private subnets.
-•	 
-
-	Internet Gateway
-•	To give the public subnets in our VPC internet access we will have to create and attach an Internet Gateway.
-o	Note: After creating the internet gateway, attach it to your VPC that you create above.
-	NAT gateway
-•	For our instances in the app layer private subnet to be able to access the internet they will need to go through a NAT Gateway. For high availability, you’ll deploy one NAT gateway in each of your public subnets.
-o	Note: In creating of the NAT gateway make sure you allocate an Elastic IP to it.
-o	Make sure you create the NAT gateway for all the public subnets.
-	Security Groups: 
-•	Security groups will tighten the rules around which traffic will be allowed to our Elastic Load Balancers and EC2 instances.
-•	First security group we create is for the public, internet facing load balancer. 
-o	Add an inbound rule to allow HTTP type traffic for your IP.
-•	Second security group we create is for the public instances in the web tier. 
-o	Add an inbound rule that allows HTTP type traffic from your internet facing load balancer security group you created above. 
-	Note: This will allow traffic from your public facing load balancer to hit your instances. 
-o	Add an additional rule that will allow HTTP type traffic for your IP. 
-	This will allow you to access your instance when we test.
-•	Third security group will be for our internal load balancer. 
-o	Add an inbound rule that allows HTTP type traffic from your public instance security group. 
-	Note: This will allow traffic from your web tier instances to hit your internal load balancer.
-•	Fourth security group we’ll configure is for our private instances.
-o	 Add an inbound rule that will allow TCP type traffic on port 4000 from the internal load balancer security group you created above. 
-	Note: This is the port our app tier application is running on and allows our internal load balancer to forward traffic on this port to our private instances. 
-o	Add another route for port 4000 that allows your IP for testing.
-•	Fifth security group we’ll configure protects our private database instances. 
-o	Add an inbound rule that will allow traffic from the private instance security group to the MYSQL/Aurora port (3306).
- 
-
-o	Part 3: Database Deployment
-	We will walk you through deploying the database layer of the three-tier architecture. We will create a subnet group for our database and deployed it in multi-AZ zones.
-	Subnet Groups
-•	Navigate to the RDS dashboard and create a Subnet group for the database.
-o	Note: When adding subnets, make sure to add the subnets we created in each availability zone specifically for our database layer. You may have to navigate back to the VPC dashboard and check to make sure you're selecting the correct subnet IDs.
-	Multi-AZ Database
-•	Navigate to Databases and create database.
-•	We'll now go through several configuration steps. Start with a Standard create for this MySQL-Compatible Amazon Aurora database. Leave the rest of the defaults in the Engine options as default.
-•	Select Dev/Test since this isn't being used for production now. Under Settings set a username and password of your choice and note them down since we'll be using password authentication to access our database.
-•	Next, under Availability and durability change the option to create an Aurora Replica or reader node in a different availability zone. Under Connectivity, set the VPC, choose the subnet group we created earlier, and select no for public access.
-•	Set the security group we created for the database layer, make sure password authentication is selected as our authentication choice, and create the database.
-•	When your database is provisioned, you should see a reader and writer instance in the database subnets of each availability zone. 
-o	Note down the writer endpoint for your database for later use.
+	- NOTE: Remember, your CIDR range for the subnets will be subsets of your VPC CIDR range.
+	- Route Tables
+    - Create a Route Table for the web layer public subnets.
+	- After creating the route table, you'll automatically be taken to the details page. Scroll down and click on the Routes tab and Edit routes.
+	- Add a route that directs traffic from the VPC to the internet gateway. In other words, for all traffic destined for IPs outside the VPC CDIR range, add an entry that directs it to the internet gateway as a target. Save the changes.
+	- Edit the Explicit Subnet Associations of the route table by navigating to the route table details again. Select Subnet Associations and click Edit subnet associations.
+	- Select the two-web layer public subnets you created earlier and click Save associations.
+	- Now create 2 more route tables, one for each app layer private subnet in each availability zone. These route tables will route app layer traffic destined for outside the VPC to the NAT gateway in the respective availability zone, so add the appropriate routes for that.
+	- Once the route tables are created and routes added, add the appropriate subnet associations for each of the app layer private subnets.
+	 
+   - Internet Gateway
+	- To give the public subnets in our VPC internet access we will have to create and attach an Internet Gateway.
+		- Note: After creating the internet gateway, attach it to your VPC that you create above.
+   - NAT gateway
+	- For our instances in the app layer private subnet to be able to access the internet they will need to go through a NAT Gateway. For high availability, you’ll deploy one NAT gateway in each of your public subnets.
+	- Note: In creating of the NAT gateway make sure you allocate an Elastic IP to it.
+	- Make sure you create the NAT gateway for all the public subnets.
+   - Security Groups: 
+	- Security groups will tighten the rules around which traffic will be allowed to our Elastic Load Balancers and EC2 instances.
+	- First security group we create is for the public, internet facing load balancer. 
+		- Add an inbound rule to allow HTTP type traffic for your IP.
+	- Second security group we create is for the public instances in the web tier. 
+		- Add an inbound rule that allows HTTP type traffic from your internet facing load balancer security group you created above. 
+		- Note: This will allow traffic from your public facing load balancer to hit your instances. 
+		- Add an additional rule that will allow HTTP type traffic for your IP. 
+ 		- This will allow you to access your instance when we test.
+	- Third security group will be for our internal load balancer. 
+		- Add an inbound rule that allows HTTP type traffic from your public instance security group. 
+		- Note: This will allow traffic from your web tier instances to hit your internal load balancer.
+	- Fourth security group we’ll configure is for our private instances.
+		- Add an inbound rule that will allow TCP type traffic on port 4000 from the internal load balancer security group you created above. 
+		- Note: This is the port our app tier application is running on and allows our internal load balancer to forward traffic on this port to our private instances. 
+		- Add another route for port 4000 that allows your IP for testing.
+	- Fifth security group we’ll configure protects our private database instances. 
+		- Add an inbound rule that will allow traffic from the private instance security group to the MYSQL/Aurora port (3306).
  
 
-o	Part 4: App Tier Instance Deployment
-	In this section we will create an EC2 instance for our app layer and make all necessary software configurations so that the app can run. The app layer consists of a Node.js application that will run on port 4000. We will also configure our database with some data and tables.
-	App Instance deployments
-•	Navigate to the EC2 service dashboard create and launch an Instances.
-o	Note: make sure you configure all the necessary parts, VPC, private subnet, AMI, security groups.
-	Connect to instance.
-•	When the instance state is running, connect to your instance by clicking the checkmark box to the left of the instance you created, and click the connect button on the top right corner of the dashboard. Select, the Session Manager tab, and click connect. This will open a new browser tab for you.
-o	NOTE: If you get a message saying that you cannot connect via session manager, then check that your instances can route to your NAT gateways and verify that you gave the necessary permissions on the IAM role for the Ec2 instance.
-•	When you first connect to your instance like this, you will be logged in as ssm-user which is the default user. Switch to ec2-user by executing the following command in the browser terminal:  => sudo -su ec2-user
-•	Now let’s check if we can reach the internet via our NAT gateways. If your network is configured correctly up till this point, you should be able to ping the google DNS servers:  => ping 8.8.8.8
-o	NOTE: If you can’t reach the internet then you need to double check your route tables and subnet associations to verify if traffic is being routed to your NAT gateway!
-	Configure Database.
-•	Let’s start by downloading the MySQL CLI: 
-o	sudo yum install mysql -y
-•	Initiate your DB connection with your Aurora RDS writer endpoint. In the following command, replace the RDS writer endpoint and the username, and then execute it in the browser terminal:
-o	mysql -h CHANGE-TO-YOUR-RDS-ENDPOINT (replace here with writer endpoint in part 3) -u CHANGE-TO-USER-NAME (replace with the username of the database) -p
-	Note: You will then be prompted to type in your password. Once you input the password and hit enter, you should now be connected to your database.
-	NOTE: If you cannot reach your database, check your credentials and security groups.
-o	Create a database called webappdb with the following command using the MySQL CLI:
-	CREATE DATABASE webappdb;   
-	You can verify that it was created correctly with the following command:  => SHOW DATABASES;
-o	Create a data table by first navigating to the database we just created: => USE webappdb;   
-o	Then, create the following transactions table by executing this create table command:
-	CREATE TABLE IF NOT EXISTS transactions (id INT NOT NULL AUTO_INCREMENT, amount DECIMAL (10,2), description VARCHAR (100), PRIMARY KEY (id));    
-•	SHOW TABLES;    
-	Insert data into table for use/testing later:
-•	INSERT INTO transactions (amount,description) VALUES ('400','groceries');   
-	Verify that your data was added by executing the following command: => SELECT * FROM transactions;
-	Type exit to exits the MySQL command line.
-	Configure App Instance
-•	The first thing we will do is update our database credentials for the app tier. To do this, open the application-code/app-tier/DbConfig.js file from your local repo in your favorite text editor on your computer. You’ll see empty strings for the hostname, user, password and database. Fill this in with the credentials you configured for your database, the writer endpoint of your database as the hostname, and webappdb for the database. Save the file.
-o	NOTE: This is NOT considered a best practice and is done for the simplicity of this project. Moving these credentials to a more suitable place like Secrets Manager is left as an extension for this project.
-•	Upload the app-tier folder to the S3 bucket that you created in part 1.
-•	Go back to your SSM session. Now we need to install all of the necessary components to run our backend application. Start by installing NVM (node version manager).
-o	curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
-o	source ~/.bashrc
-•	Next, install a compatible version of Node.js and make sure it's being used.
-o	nvm install 16
-o	nvm use 16
-•	PM2 is a daemon process manager that will keep our node.js app running when we exit the instance or if it is rebooted. Install that as well.
-o	npm install -g pm2   
-•	Now we need to download our code from our s3 buckets onto our instance. In the command below, replace BUCKET_NAME with the name of the bucket you uploaded the app-tier folder to:
-o	cd ~/
-o	aws s3 cp s3://BUCKET_NAME/app-tier/ app-tier –recursive
-•	Navigate to the app directory, install dependencies, and start the app with pm2.
-o	cd ~/app-tier
-o	npm install
-o	pm2 start index.js
-o	To make sure the app is running correctly run the following: => pm2 list
-o	If you see a status of online, the app is running. If you see errored, then you need to do some troubleshooting. To look at the latest errors, use this command: => pm2 logs
-	NOTE: If you’re having issues, check your configuration file for any typos, and double check that you have followed all installation commands till now.
-•	Right now, pm2 is just making sure our app stays running when we leave the SSM session. However, if the server is interrupted for some reason, we still want the app to start and keep running. This is also important for the AMI we will create: => pm2 startup
-o	After running this you will see a message similar to this.
-o	[PM2] To setup the Startup Script, copy/paste the following command: sudo env PATH=$PATH:/home/ec2-user/.nvm/versions/node/v16.0.0/bin /home/ec2-user/.nvm/versions/node/v16.0.0/lib/node_modules/pm2/bin/pm2 startup systemd -u ec2-user —hp /home/ec2-user
-o	DO NOT run the above command, rather you should copy and past the command in the output you see in your own terminal. After you run it, save the current list of node processes with the following command:
-	pm2 save
-	Test App Tier
-•	Now let's run a couple tests to see if our app is configured correctly and can retrieve data from the database.
-•	To hit out health check endpoint, copy this command into your SSM terminal. This is our simple health check endpoint that tells us if the app is simply running.
-o	curl http://localhost:4000/health
-o	The response should looks like the following:
-	"This is the health check"
-o	Next, test your database connection. You can do that by hitting the following endpoint locally:
-	curl http://localhost:4000/transaction
-o	You should see a response containing the test data we added earlier:
-	{"result":[{"id":1,"amount":400,"description":"groceries"},{"id":2,"amount":100,"description":"class"},{"id":3,"amount":200,"description":"other groceries"},{"id":4,"amount":10,"description":"brownies"}]}
-o	If you see both of these responses, then your networking, security, database and app configurations are correct.
-o	Congrats! Your app layer is fully configured and ready to go.
+   - Part 3: Database Deployment
+   	- We will walk you through deploying the database layer of the three-tier architecture. We will create a subnet group for our database and deployed it in multi-AZ zones.
+	- Subnet Groups
+		- Navigate to the RDS dashboard and create a Subnet group for the database.
+		- Note: When adding subnets, make sure to add the subnets we created in each availability zone specifically for our database layer. You may have to navigate back to the VPC dashboard and check to make sure you're selecting the correct subnet IDs.
+	- Multi-AZ Database
+		- Navigate to Databases and create database.
+		- We'll now go through several configuration steps. Start with a Standard create for this MySQL-Compatible Amazon Aurora database. Leave the rest of the defaults in the Engine options as default.
+		- Select Dev/Test since this isn't being used for production now. Under Settings set a username and password of your choice and note them down since we'll be using password authentication to access our database.
+		- Next, under Availability and durability change the option to create an Aurora Replica or reader node in a different availability zone. Under Connectivity, set the VPC, choose the subnet group we created earlier, and select no for public access.
+		- Set the security group we created for the database layer, make sure password authentication is selected as our authentication choice, and create the database.
+		- When your database is provisioned, you should see a reader and writer instance in the database subnets of each availability zone. 
+			- Note down the writer endpoint for your database for later use.
+ 
 
-o	Part 5: Internal Load Balancing and Auto Scaling
-	In this section of the project, we will create an Amazon Machine Image (AMI) of the app tier instance we just created and use that to set up autoscaling with a load balancer in order to make this tier highly available.
-	Create an AMI of our App Tier
-•	Navigate to Instances. Select the app tier instance we created and under Actions select Image and templates and Create Image.
-•	Give the image a name and description and then click Create image. This will take a few minutes, but if you want to monitor the status of image creation you can see it by clicking AMIs under Images on the left-hand navigation panel of the EC2 dashboard.
-	Target group
-•	We will create our target group to use with the load balancer. On the EC2 dashboard navigate to Target Groups under Load Balancing on the left-hand side. Click on Create Target Group.
-•	The purpose of forming this target group is to use with our load balancer to balance the traffic across our private app tier instances.
-•	Select Instances as the target type and give it a name.
-•	Then, set the protocol to HTTP and the port to 4000. Remember that this is the port our Node.ja app is running on. Select the VPC we've been using thus far, and then change the health check path to be /health. This is the health check endpoint of our app. Click Next.
-•	We are NOT going to register any targets for now, so just skip that step and create the target group.
+   - Part 4: App Tier Instance Deployment
+	- In this section we will create an EC2 instance for our app layer and make all necessary software configurations so that the app can run. The app layer consists of a Node.js application that will run on port 4000. We will also configure our database with some data and tables.
+	- App Instance deployments
+	- Navigate to the EC2 service dashboard create and launch an Instances.
+		- Note: make sure you configure all the necessary parts, VPC, private subnet, AMI, security groups.
+	- Connect to instance.
+	- When the instance state is running, connect to your instance by clicking the checkmark box to the left of the instance you created, and click the connect button on the top right corner of the dashboard. Select, the Session Manager tab, and click connect. This will open a new browser tab for you.
+		- NOTE: If you get a message saying that you cannot connect via session manager, then check that your instances can route to your NAT gateways and verify that you gave the necessary permissions on the IAM role for the Ec2 instance.
+	- When you first connect to your instance like this, you will be logged in as ssm-user which is the default user. Switch to ec2-user by executing the following command in the browser terminal:  => sudo -su ec2-user
+	- Now let’s check if we can reach the internet via our NAT gateways. If your network is configured correctly up till this point, you should be able to ping the google DNS servers:  => ping 8.8.8.8
+		- NOTE: If you can’t reach the internet then you need to double check your route tables and subnet associations to verify if traffic is being routed to your NAT gateway!
+	- Configure Database.
+	- Let’s start by downloading the MySQL CLI: 
+		- sudo yum install mysql -y
+	- Initiate your DB connection with your Aurora RDS writer endpoint. In the following command, replace the RDS writer endpoint and the username, and then execute it in the browser terminal:
+	- mysql -h CHANGE-TO-YOUR-RDS-ENDPOINT (replace here with writer endpoint in part 3) -u CHANGE-TO-USER-NAME (replace with the username of the database) -p
+		- Note: You will then be prompted to type in your password. Once you input the password and hit enter, you should now be connected to your database.
+		- NOTE: If you cannot reach your database, check your credentials and security groups.
+	- Create a database called webappdb with the following command using the MySQL CLI:
+		- CREATE DATABASE webappdb;   
+	- You can verify that it was created correctly with the following command:
+ 		- => SHOW DATABASES;
+	- Create a data table by first navigating to the database we just created:
+		- => USE webappdb;   
+	- Then, create the following transactions table by executing this create table command:
+	- CREATE TABLE IF NOT EXISTS transactions (id INT NOT NULL AUTO_INCREMENT, amount DECIMAL (10,2), description VARCHAR (100), PRIMARY KEY (id));    
+		- SHOW TABLES;    
+	- Insert data into table for use/testing later:
+		- INSERT INTO transactions (amount,description) VALUES ('400','groceries');   
+	- Verify that your data was added by executing the following command:
+		- => SELECT * FROM transactions;
+		- Type exit to exits the MySQL command line.
+	- Configure App Instance
+	- The first thing we will do is update our database credentials for the app tier. To do this, open the application-code/app-tier/DbConfig.js file from your local repo in your favorite text editor on your computer. You’ll see empty strings for the hostname, user, password and database. Fill this in with the credentials you configured for your database, the writer endpoint of your database as the hostname, and webappdb for the database. Save the file.
+		- NOTE: This is NOT considered a best practice and is done for the simplicity of this project. Moving these credentials to a more suitable place like Secrets Manager is left as an extension for this project.
+	- Upload the app-tier folder to the S3 bucket that you created in part 1.
+	- Go back to your SSM session. Now we need to install all of the necessary components to run our backend application. Start by installing NVM (node version manager).
+		- curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
+		- source ~/.bashrc
+	- Next, install a compatible version of Node.js and make sure it's being used.
+		- nvm install 16
+		- nvm use 16
+	- PM2 is a daemon process manager that will keep our node.js app running when we exit the instance or if it is rebooted. Install that as well.
+		- npm install -g pm2   
+	- Now we need to download our code from our s3 buckets onto our instance. In the command below, replace BUCKET_NAME with the name of the bucket you uploaded the app-tier folder to:
+		- cd ~/
+		- aws s3 cp s3://BUCKET_NAME/app-tier/ app-tier –recursive
+	- Navigate to the app directory, install dependencies, and start the app with pm2.
+o		- cd ~/app-tier
+		- npm install
+		- pm2 start index.js
+	- To make sure the app is running correctly run the following:
+		- => pm2 list
+	- If you see a status of online, the app is running. If you see errored, then you need to do some troubleshooting. To look at the latest errors, use this command:
+		 - => pm2 logs
+		 - NOTE: If you’re having issues, check your configuration file for any typos, and double check that you have followed all installation commands till now.
+	- Right now, pm2 is just making sure our app stays running when we leave the SSM session. However, if the server is interrupted for some reason, we still want the app to start and keep running. This is also important for the AMI we will create:
+		 - => pm2 startup
+	- After running this you will see a message similar to this.
+ 	- To setup the Startup Script, copy/paste the following command:
+     		 -  sudo env PATH=$PATH:/home/ec2-user/.nvm/versions/node/v16.0.0/bin /home/ec2-user/.nvm/versions/node/v16.0.0/lib/node_modules/pm2/bin/pm2 startup systemd -u ec2-user —hp /home/ec2-user
+	- DO NOT run the above command, rather you should copy and past the command in the output you see in your own terminal. After you run it, save the current list of node processes with the following command:
+		 - pm2 save
+	- Test App Tier
+	- Now let's run a couple tests to see if our app is configured correctly and can retrieve data from the database.
+	- To hit out health check endpoint, copy this command into your SSM terminal. This is our simple health check endpoint that tells us if the app is simply running.
+		  - curl http://localhost:4000/health
+	- The response should looks like the following:
+		 - "This is the health check"
+	- Next, test your database connection. You can do that by hitting the following endpoint locally:
+		 - curl http://localhost:4000/transaction
+	- You should see a response containing the test data we added earlier:
+		**{"result":[{"id":1,"amount":400,"description":"groceries"},{"id":2,"amount":100,"description":"class"},{"id":3,"amount":200,"description":"other groceries"},{"id":4,"amount":10,"description":"brownies"}]}**
+	- If you see both of these responses, then your networking, security, database and app configurations are correct.
+	** Congrats! Your app layer is fully configured and ready to go.**
 
-	Deploy Internal Load Balancer
-•	Now let’s Create Load Balancer
-•	We'll be using an Application Load Balancer for our HTTP traffic so click the create button for that option.
-•	After giving the load balancer a name, be sure to select internal since this one will not be public facing, but rather it will route traffic from our web tier to the app tier.
-•	Select the correct network configuration for VPC and private subnets.
-•	Select the security group we created for this internal ALB. Now, this ALB will be listening for HTTP traffic on port 80. It will be forwarding the traffic to our target group that we just created, so select it from the dropdown, and create the load balancer.
-	Create a Launch Template
-•	Before we configure Auto Scaling, we need to create a Launch template with the AMI we created earlier. Navigate to Launch Template under Instances and click Create Launch Template.
-•	Name the Launch Template, and then under Application and OS Images include the app tier AMI you created.
-•	Under Instance Type select t2.micro. For Key pair and Network Settings don't include it in the template. We don't need a key pair to access our instances and we'll be setting the network information in the autoscaling group.
-•	Set the correct security group for our app tier, and then under Advanced details use the same IAM instance profile we have been using for our EC2 instances.
-	Configure Autoscaling
+ - Part 5: Internal Load Balancing and Auto Scaling
+	- In this section of the project, we will create an Amazon Machine Image (AMI) of the app tier instance we just created and use that to set up autoscaling with a load balancer in order to make this tier highly available.
+	- Create an AMI of our App Tier
+	- Navigate to Instances. Select the app tier instance we created and under Actions select Image and templates and Create Image.
+	- Give the image a name and description and then click Create image. This will take a few minutes, but if you want to monitor the status of image creation you can see it by clicking AMIs under Images on the left-hand navigation panel of the EC2 dashboard.
+	- Target group
+	- We will create our target group to use with the load balancer. On the EC2 dashboard navigate to Target Groups under Load Balancing on the left-hand side. Click on Create Target Group.
+	- The purpose of forming this target group is to use with our load balancer to balance the traffic across our private app tier instances.
+	- Select Instances as the target type and give it a name.
+	- Then, set the protocol to HTTP and the port to 4000. Remember that this is the port our Node.ja app is running on. Select the VPC we've been using thus far, and then change the health check path to be /health. This is the health check endpoint of our app. Click Next.
+	- We are NOT going to register any targets for now, so just skip that step and create the target group.
+
+	- Deploy Internal Load Balancer
+	- Now let’s Create Load Balancer
+	- We'll be using an Application Load Balancer for our HTTP traffic so click the create button for that option.
+	- After giving the load balancer a name, be sure to select internal since this one will not be public facing, but rather it will route traffic from our web tier to the app tier.
+	- Select the correct network configuration for VPC and private subnets.
+	- Select the security group we created for this internal ALB. Now, this ALB will be listening for HTTP traffic on port 80. It will be forwarding the traffic to our target group that we just created, so select it from the dropdown, and create the load balancer.
+	- Create a Launch Template
+	- Before we configure Auto Scaling, we need to create a Launch template with the AMI we created earlier. Navigate to Launch Template under Instances and click Create Launch Template.
+	- Name the Launch Template, and then under Application and OS Images include the app tier AMI you created.
+	- Under Instance Type select t2.micro. For Key pair and Network Settings don't include it in the template. We don't need a key pair to access our instances and we'll be setting the network information in the autoscaling group.
+	- Set the correct security group for our app tier, and then under Advanced details use the same IAM instance profile we have been using for our EC2 instances.
+	- Configure Autoscaling
 •	We will now create the Auto Scaling Group for our app instances. Navigate to Auto Scaling Groups under Auto Scaling and click Create Auto Scaling group.
 •	Give your Auto Scaling group a name, and then select the Launch Template we just created and click next.
 •	On the Choose instance launch options page set your VPC, and the private instance subnets for the app tier and continue to step 3.
